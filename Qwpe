@@ -1,0 +1,228 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+-- ลบ UI เก่าป้องกันการซ้ำ
+if CoreGui:FindFirstChild("RGB_Hunter_Ultimate") then CoreGui.RGB_Hunter_Ultimate:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RGB_Hunter_Ultimate"
+ScreenGui.Parent = CoreGui
+ScreenGui.IgnoreGuiInset = true
+
+-- === [ 1. ระบบสีรุ้ง RGB ] ===
+local function MakeRainbow(object)
+	if object:IsA("UIStroke") or object:IsA("Highlight") then
+		RunService.RenderStepped:Connect(function()
+			local color = Color3.fromHSV(tick() % 5 / 5, 1, 1)
+			if object:IsA("UIStroke") then object.Color = color
+			elseif object:IsA("Highlight") then object.FillColor = color end
+		end)
+	end
+end
+
+-- === [ 2. สร้าง UI หลัก ] ===
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 260, 0, 400)
+MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame)
+local mStroke = Instance.new("UIStroke", MainFrame)
+mStroke.Thickness = 3
+MakeRainbow(mStroke)
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Text = "TSB HUNTER RGB"
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+
+local DistInput = Instance.new("TextBox", MainFrame)
+DistInput.PlaceholderText = "ระยะห่าง (Distance)"
+DistInput.Text = "4"
+DistInput.Size = UDim2.new(0.9, 0, 0, 35)
+DistInput.Position = UDim2.new(0.05, 0, 0.12, 0)
+DistInput.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+DistInput.TextColor3 = Color3.new(0, 1, 1)
+Instance.new("UICorner", DistInput)
+
+-- รายชื่อผู้เล่น (พร้อมรูปโปรไฟล์)
+local Scroll = Instance.new("ScrollingFrame", MainFrame)
+Scroll.Size = UDim2.new(0.9, 0, 0, 110)
+Scroll.Position = UDim2.new(0.05, 0, 0.23, 0)
+Scroll.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Scroll.ScrollBarThickness = 2
+local layout = Instance.new("UIListLayout", Scroll)
+layout.Padding = UDim.new(0, 5)
+
+-- ปุ่มฟังก์ชันต่างๆ
+local function CreateBtn(text, pos)
+	local btn = Instance.new("TextButton", MainFrame)
+	btn.Text = text .. " [OFF]"
+	btn.Size = UDim2.new(0.9, 0, 0, 42)
+	btn.Position = pos
+	btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Font = Enum.Font.GothamBold
+	Instance.new("UICorner", btn)
+	local s = Instance.new("UIStroke", btn)
+	s.Thickness = 2
+	MakeRainbow(s)
+	return btn
+end
+
+local HighlightBtn = CreateBtn("HIGHLIGHT", UDim2.new(0.05, 0, 0.54, 0))
+local WarpBtn = CreateBtn("STAY BEHIND", UDim2.new(0.05, 0, 0.68, 0))
+local OrbitBtn = CreateBtn("ORBIT MODE", UDim2.new(0.05, 0, 0.82, 0))
+
+-- === [ 3. ระบบแจ้งเตือนแบบกดทะลุ ] ===
+local function NotifyJoin(p)
+	if p == Players.LocalPlayer then return end
+	local nFrame = Instance.new("Frame", ScreenGui)
+	nFrame.Size = UDim2.new(0, 220, 0, 70)
+	nFrame.Position = UDim2.new(1, 20, 0.1, 0)
+	nFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	nFrame.Active = false -- กดทะลุได้
+	nFrame.Selectable = false
+	
+	local ns = Instance.new("UIStroke", nFrame)
+	ns.Thickness = 2
+	MakeRainbow(ns)
+	Instance.new("UICorner", nFrame)
+	
+	local img = Instance.new("ImageLabel", nFrame)
+	img.Size = UDim2.new(0, 50, 0, 50)
+	img.Position = UDim2.new(0, 10, 0.5, -25)
+	img.BackgroundTransparency = 1
+	img.Active = false
+	Instance.new("UICorner", img).CornerRadius = UDim.new(1,0)
+	
+	local t = Instance.new("TextLabel", nFrame)
+	t.Size = UDim2.new(1, -70, 1, 0)
+	t.Position = UDim2.new(0, 65, 0, 0)
+	t.Text = p.DisplayName .. "\nJOINED"
+	t.TextColor3 = Color3.new(1,1,1)
+	t.BackgroundTransparency = 1
+	t.TextSize = 12
+	t.Font = Enum.Font.GothamBold
+	t.Active = false
+
+	pcall(function()
+		img.Image = Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+	end)
+
+	nFrame:TweenPosition(UDim2.new(1, -240, 0.1, 0), "Out", "Back", 0.5)
+	task.wait(4)
+	nFrame:TweenPosition(UDim2.new(1, 20, 0.1, 0), "In", "Quad", 0.5)
+	task.wait(0.6)
+	nFrame:Destroy()
+end
+
+-- === [ 4. LOGIC ระบบรายชื่อและวาร์ป ] ===
+local TargetName = ""
+local Status = { Highlight = false, Warp = false, Orbit = false }
+local Angle = 0
+
+local function Refresh()
+	for _, v in pairs(Scroll:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= Players.LocalPlayer then
+			local itemFrame = Instance.new("Frame", Scroll)
+			itemFrame.Size = UDim2.new(1, -5, 0, 45)
+			itemFrame.BackgroundTransparency = 0.9
+			Instance.new("UICorner", itemFrame)
+
+			local pImg = Instance.new("ImageLabel", itemFrame)
+			pImg.Size = UDim2.new(0, 35, 0, 35)
+			pImg.Position = UDim2.new(0, 5, 0.5, -17.5)
+			pImg.BackgroundTransparency = 1
+			pcall(function()
+				pImg.Image = Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+			end)
+			Instance.new("UICorner", pImg).CornerRadius = UDim.new(1, 0)
+
+			local b = Instance.new("TextButton", itemFrame)
+			b.Size = UDim2.new(1, -50, 1, 0)
+			b.Position = UDim2.new(0, 45, 0, 0)
+			b.Text = p.DisplayName
+			b.TextColor3 = Color3.new(1,1,1)
+			b.TextXAlignment = Enum.TextXAlignment.Left
+			b.BackgroundTransparency = 1
+			b.Font = Enum.Font.GothamSemibold
+
+			b.MouseButton1Click:Connect(function()
+				TargetName = p.Name
+				Title.Text = "TARGET: " .. p.DisplayName:upper()
+			end)
+		end
+	end
+end
+
+Players.PlayerAdded:Connect(function(p) Refresh() NotifyJoin(p) end)
+Players.PlayerRemoving:Connect(Refresh)
+Refresh()
+
+local function UpdateVisual(btn, key, label)
+	Status[key] = not Status[key]
+	btn.Text = Status[key] and label .. " [ON]" or label .. " [OFF]"
+	btn.BackgroundColor3 = Status[key] and Color3.fromRGB(0, 60, 0) or Color3.fromRGB(35, 35, 35)
+end
+
+HighlightBtn.MouseButton1Click:Connect(function() UpdateVisual(HighlightBtn, "Highlight", "HIGHLIGHT") end)
+WarpBtn.MouseButton1Click:Connect(function() UpdateVisual(WarpBtn, "Warp", "STAY BEHIND") end)
+OrbitBtn.MouseButton1Click:Connect(function() UpdateVisual(OrbitBtn, "Orbit", "ORBIT MODE") end)
+
+-- Main Loop (Real-time tracking)
+RunService.Heartbeat:Connect(function(dt)
+	if Status.Highlight and TargetName ~= "" then
+		local t = Players:FindFirstChild(TargetName)
+		if t and t.Character and not t.Character:FindFirstChild("T_High") then
+			local h = Instance.new("Highlight", t.Character)
+			h.Name = "T_High"
+			MakeRainbow(h)
+		end
+	end
+
+	if TargetName == "" then return end
+	pcall(function()
+		local TChar = Players[TargetName].Character
+		local MyChar = Players.LocalPlayer.Character
+		if TChar and MyChar then
+			local TRoot = TChar.HumanoidRootPart
+			local MyRoot = MyChar.HumanoidRootPart
+			local dist = tonumber(DistInput.Text) or 4
+			local finalPos
+
+			if Status.Warp and Status.Orbit then
+				Angle = Angle + (dt * 6)
+				finalPos = TRoot.Position + Vector3.new(math.cos(Angle) * dist, 0, math.sin(Angle) * dist)
+			elseif Status.Warp then
+				finalPos = (TRoot.CFrame * CFrame.new(0, 0, dist)).Position
+			elseif Status.Orbit then
+				Angle = Angle + (dt * 6)
+				finalPos = TRoot.Position + Vector3.new(math.cos(Angle) * dist, 0, math.sin(Angle) * dist)
+			end
+
+			if finalPos then MyRoot.CFrame = CFrame.lookAt(finalPos, TRoot.Position) end
+		end
+	end)
+end)
+
+-- ปุ่มเปิด/ปิดเมนู (H)
+local ToggleUI = Instance.new("TextButton", ScreenGui)
+ToggleUI.Size = UDim2.new(0, 45, 0, 45)
+ToggleUI.Position = UDim2.new(0.01, 0, 0.45, 0)
+ToggleUI.Text = "H"
+ToggleUI.BackgroundColor3 = Color3.fromRGB(15,15,15)
+ToggleUI.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", ToggleUI).CornerRadius = UDim.new(1,0)
+local ts = Instance.new("UIStroke", ToggleUI)
+ts.Thickness = 3
+MakeRainbow(ts)
+ToggleUI.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
